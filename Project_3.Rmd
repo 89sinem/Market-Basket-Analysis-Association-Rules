@@ -1,0 +1,238 @@
+---
+title: "Assignment 3"
+output:
+  html_document:
+    df_print: paged
+---
+
+STEP 1: SET DIRECTORY
+```{r}
+setwd("/Users/atakemma/Emma/BU_MET/BLOG ARTICLE/AD699 Data Mining for Business Analytics/Modules/Projects/Project_3")
+```
+
+
+STEP 2: LIBRARIES
+```{r}
+library(ggplot2)
+library(tidyverse)
+library(arulesViz)
+library(arules)
+```
+
+
+STEP 3: LOAD DATA
+
+a. Getting the Data
+```{r}
+data(Groceries)
+``` 
+
+b. More Info About the Data (Package Name)
+```{r}
+help.search("Groceries")
+```
+
+c. Check the class of the Groceries data set
+```{r}
+class_of_groceries <- class(Groceries)
+print(class_of_groceries)
+```
+
+QUESTION: What is the transactions class?
+ANSWER: 
+- The transactions class (known as sparse matrix) in the "arules" package is designed to efficiently handle transaction data, typically used in market basket analysis, where the goal is to identify patterns or associations between items based on their co-occurrence in transactions.
+- It represents transactions as a sparse matrix, optimizing memory and computational efficiency, and provides specialized methods for tasks like association rule mining.
+
+d. Download the File Locally. (csv)
+```{r}
+# Convert the transactions object to a sparse matrix
+groceries_matrix <- as(Groceries, "matrix")
+
+# Convert the matrix to a data frame
+groceries_df <- as.data.frame(groceries_matrix)
+
+# Write the data frame to a CSV file
+write.csv(groceries_df, "Groceries.csv", row.names = FALSE)
+```
+The transactions class cannot save to a CSV file. If you want to review a dataset as CSV, you need to convert it to a "matrix".
+
+e. Call str() Function
+```{r}
+str(Groceries)
+```
+This is the structure of a transaction object (known as sparse matrix).
+Sparse matrices are used in transactional data like the Groceries dataset because they efficiently store only the non-zero elements, which reduces memory usage and speeds up computations. This is particularly useful for large datasets with many items, where most transactions involve only a small subset of all possible items. By focusing on actual data rather than zeros, sparse matrices enable scalable and efficient analysis.
+
+Components:
+
+* Formal Class 'transactions': This is the main class from the arules package used to handle transaction data.
+
+* Slots in the 'transactions' Object:
+
+@data: This slot contains a sparse matrix of class ngCMatrix from the Matrix package, which efficiently stores the transactional data.
+  @i: An integer vector indicating the row indices of the non-zero elements in the sparse matrix.
+  @p: An integer vector that points to the start of each column in the @i vector.
+  @Dim: A vector specifying the dimensions of the matrix, here showing 169 rows (items) and 9835 columns (transactions).
+  @Dimnames: A list of two elements that would typically store the names for rows and columns, but here both are NULL.
+  @factors: An empty list, which could be used for storing additional factors if needed.
+
+@itemInfo: A data frame with 169 observations and 3 variables, providing metadata about the items:
+  labels: A character vector listing item names, such as "frankfurter," "sausage," etc.
+  level2: A factor with 55 levels, possibly categorizing items into broader categories or types.
+  level1: A factor with 10 levels, potentially another categorization layer for the items.
+
+@itemsetInfo: A data frame with 0 observations and 0 variables, indicating that there is currently no additional information stored about itemsets.
+
+f. Cols and Rows
+```{r}
+# number of rows
+print(sprintf("The number of rows in calls is: %d", nrow(Groceries)))
+# number of columns
+print(sprintf("The number of columns in calls is: %d", ncol(Groceries)))
+```
+The Grocery dataset contains 9,835 rows and 169 columns.
+
+STEP 4: item frequency barplot with  support rate greater than 0.05.
+```{r}
+frequentItems <- eclat(Groceries, parameter = list(supp = 0.05))
+# itemFrequencyPlot(Groceries, support = 0.05, main="Item Frequency",  ylab = "Support")
+frequentItems
+
+# All items w/o any order
+# itemFrequencyPlot(Groceries, support = 0.05, main="Item Frequency", ylab = "Support")
+
+#descending order
+itemFrequencyPlot(Groceries, support = 0.05, main="Item Frequency", topN = length(frequentItems), ylab = "Support")
+```
+ Eclat algorithm in R, used for mining frequent item sets in a data set.
+ Output:
+
+1. Parameter Specification: The algorithm has been configured with an "Absolute minimum support count" of 491. This means that only itemsets appearing in at least 491 transactions will be considered frequent.
+
+Itemset Creation: The process begins by identifying items and transactions in the dataset. In this case, there are 169 unique items and 9,835 transactions.
+
+Sorting and Recoding Items: The algorithm sorts and recodes the items, reducing them to 28 items that meet the minimum support criteria.
+Sparse Bit Matrix Creation: A sparse bit matrix is created with 28 rows (representing the items) and 9,835 columns (representing the transactions). This matrix efficiently represents the presence or absence of items in transactions.
+
+Writing Itemsets: The algorithm identifies and records 31 frequent itemsets that meet the specified support threshold.
+S4 Object Creation:
+
+The result is stored in an S4 object, which is a type of object used in R for structured data.
+
+RESULT: 
+- Overall, this output indicates that the Eclat algorithm has successfully identified 31 frequent itemsets from the data set, using a minimum support threshold of 491.
+
+- High Frequency: Items like "whole milk" and "other vegetables" have higher support values, indicating they are purchased frequently.
+- Moderate Frequency: Items such as "rolls/buns," "soda," and "yogurt" show moderate support.
+- Lower Frequency: Items like "pork," "butter," "curd," "beef," and "napkins" have lower support values, suggesting they are less commonly purchased.
+
+STEP 5: GROCERY CHOSEN ITEM ANALYSIS
+
+a. Chosen Item: Coffee
+```{r}
+coffee_lhs <- apriori(data=Groceries, parameter=list(supp=0.001,conf = 0.001), appearance = list(lhs = "coffee"), control = list(verbose=F))
+coffee_lhs_conf <- sort(coffee_lhs, by="confidence", decreasing=TRUE) 
+
+coffee_rhs <- apriori(data=Groceries, parameter=list(supp=0.001,conf = 0.001), appearance = list(rhs = "coffee"), control = list(verbose=F))
+coffee_rhs_conf <- sort(coffee_rhs, by="confidence", decreasing=TRUE) 
+
+inspect(head(coffee_rhs_conf,10))
+inspect(head(coffee_lhs_conf,10))
+```
+-The item we are interested in is Coffee. First investigate which items are the most likely to be purchased with Coffee based on confidence level.
+
+-apriori() function give us a list all the item where the left hand side (lhs) is Coffee. 
+
+- left hand side => lhs is the if statement
+(If Coffee then what item)
+
+- right hand side => rhs is the then statement
+(If whole milk then what item/coffee or not)
+
+-A few of the food items with the highest confidence linked to coffee: sugar, yogurt, whole milk, and oil. (shopping bags => there is no information about it such as, is it real shopping bag or clothing/plastic bags etc. So then I did not use it.) 
+
+We'll create the following four rules based on these items:
+
+1) We are interested in examining the customers who purchased coffee, and also purchased sugar
+If Coffee (antecedent - if statement), then Sugar (consequent - then statement)
+```{r}
+coffeesugar <- apriori(data=Groceries, parameter=list(supp=0.001,conf = 0.001), appearance = list(lhs = "coffee", rhs = "sugar"), control = list(verbose=F))
+inspect(coffeesugar[2])
+```
+- The support is 0.00478, which represents the proportion of all transactions that involve both sugar and coffee, or 0.00478, or 0.478%. 
+- The confidence is 0.0823, which represents the proportion of all transactions that included coffee, as well as sugar, at 0.0823 or 8.23%. 
+- The lift is 2.431, which means that for those customers who purchased coffee, they are 2.431 times more likely to buy sugar than the average customer. This is larger than 1, which may indicate that many customers who purchase coffee also purchase sugar solely because they like to have it with their coffee.
+
+2) We are interested in examining the customers who purchased coffee and also purchased whole milk
+If Coffee (antecedent - if statement), then Whole Milk (consequent - then statement)
+```{r}
+coffeemilk <- apriori(data=Groceries, parameter=list(supp=0.001,conf = 0.001), appearance = list(lhs = "coffee", rhs = "whole milk"), control = list(verbose=F))
+inspect(coffeemilk[2])
+```
+- The support is 0.0187, which represents the proportion of all transactions that include both whole milk and coffee, or 1.87%. 
+- The confidence is 0.322, which represents the proportion of all transactions that included coffee, including whole milk, at 0.322 or 32.2%. 
+- The lift is 1.26, which means that  for those customers who purchased coffee, they are 1.26 times more likely to buy whole milk than the average customer. This is larger than 1, which may indicate that many customers who purchase coffee also purchase whole milk solely because they like to have it with their coffee.
+
+3) We are interested in examining customers who purchased both oil and coffee.
+If Oil (antecedent - if statement), then Coffee (consequent - then statement)
+```{r}
+oilcoffee <- apriori(data=Groceries, parameter=list(supp=0.001,conf = 0.001), appearance = list(lhs = "oil", rhs = "coffee"), control = list(verbose=F))
+inspect(oilcoffee[2])
+```
+
+- The support is 0.00336, which represents the proportion of all transactions that involve both oil and coffee, or 0.336%. 
+- The confidence is 0.120, which represents the proportion of all transactions that included oil, as well as coffee, at 0.120 or 12.0%. 
+- The lift is 2.06, which means that for customers who purchased oil, they are 2.06 times more likely also to buy coffee than the average customer. This is larger than 1, which indicates that many customers who purchase oil also purchase coffee. This could be because they use oil for cooking breakfast in the morning, along with drinking coffee.
+
+4) We are interested in examining the customers who purchased yogurt and also purchased coffee.
+If Yogurt (antecedent - if statement), then Coffee (consequent - then statement)
+```{r}
+yogurtcoffee <- apriori(data=Groceries, parameter=list(supp=0.001,conf = 0.001), appearance = list(lhs = "yogurt", rhs = "coffee"), control = list(verbose=F))
+inspect(yogurtcoffee[2])
+```
+- The support is 0.00976, which represents the proportion of all transactions that involve both yogurt and coffee, or 0.976%. 
+- The confidence is 0.070, which is the proportion of all transactions that included yogurt, also including coffee, 0.070 or 7.0%. 
+- The lift is 1.205, which means that for customers who purchased yogurt, they are 1.205 times more likely also to buy coffee than the average customer. This is larger than 1, which may indicate that many customers who purchase yogurt also purchase coffee, likely because they enjoy having it with their yogurt.
+
+FINDINGS:
+- The first two rules have sugar and milk as the consequents, and coffee as the antecedent. Each also has a lift ratio greater than 1 when paired with coffee. This indicates that customers who purchase coffee are more likely to buy sugar or whole milk. The supermarket should target marketing sugar and whole milk to these customers who buy coffee, as they are more likely to purchase these products than the average customer.
+
+- The last two rules have coffee as the consequent and either yogurt or oil as the antecedent. Each also has a lift ratio greater than 1 when paired with coffee. This indicates that customers who purchase yogurt or oil are more likely to buy coffee. The supermarket should target its marketing efforts at these customers who purchase yogurt or oil, as they are more likely to buy coffee than the average customer. 
+
+
+STEP 6: VISUALIZATION
+
+a. Scatterplot for If coffee, then sugar, if coffee, then milk, if oil, then coffee
+```{r}
+inspect(c(coffeesugar[2],coffeemilk[2],oilcoffee[2]))
+plot(c(coffeesugar[2],coffeemilk[2],oilcoffee[2]), measure = c("confidence","lift"))
+```
+The scatterplot shows 3 points, each with coordinates of (confidence, lift). 
+They represent rules 1, 2, and 3 above. 
+For these three rules, it appears that there is an inverse relationship between lift and confidence, meaning that as confidence increases, lift decreases.
+
+b.Association Rule Graph for If coffee, then sugar, if coffee, then milk, if oil, then coffee
+```{r}
+inspect(c(coffeesugar[2],coffeemilk[2],oilcoffee[2]))
+plot(c(coffeesugar[2],coffeemilk[2],oilcoffee[2]), method = "graph", engine = "htmlwidget")
+```
+
+Nodes:
+The graph contains nodes representing items and rules. Items are labeled as "sugar," "coffee," "oil," and "whole milk."
+The nodes labeled "rule 1," "rule 2," and "rule 3" represent specific association rules.
+
+Edges:
+Arrows connect items to rules, indicating the direction of the association. For example, an arrow from "sugar" to "rule 1" suggests that "sugar" is part of the antecedent (left-hand side) of "rule 1."
+Similarly, arrows from rules to items indicate the consequent (right-hand side) of the rule. For instance, "rule 1" points to "coffee," suggesting that "coffee" is the consequent of this rule.
+
+Color and Size: 
+The colors and sizes of the nodes might represent certain metrics associated with the rules, such as support, confidence, or lift. In many visualizations, darker or larger nodes might indicate stronger or more significant rules.
+
+Findings:
+"Rule 1" suggests that when "sugar" is purchased, "coffee" is also likely to be purchased.
+"Rule 2" indicates an association between "coffee" and "whole milk."
+"Rule 3" suggests a relationship between "oil" and "coffee."
+
+
+
+
